@@ -1,4 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+const explodeSound = new Audio('backgrounds/explosion.mp3');
+
 
       let scene, camera, renderer;
       let stones = [];
@@ -23,7 +25,12 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
 
       function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xbfd1e5);
+        scene.background = new THREE.Color(0x17202a);
+        // const loader = new THREE.TextureLoader();
+        // loader.load('backgrounds/main.jpg', function (texture) {
+        //   scene.background = texture;
+        // });
+
 
         camera = new THREE.PerspectiveCamera(
           70,
@@ -38,8 +45,8 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(0, 10, 10);
+        const light = new THREE.DirectionalLight(0xffffff, 0.8);
+        light.position.set(1, 2,5);
         scene.add(light);
 
         setupUI();
@@ -60,7 +67,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         scoreElement.style.top = '10px';
         scoreElement.style.left = '10px';
         scoreElement.style.fontSize = '24px';
-        scoreElement.style.color = 'black';
+        scoreElement.style.color = 'white';
         scoreElement.innerHTML = `Score: 0`;
         document.body.appendChild(scoreElement);
 
@@ -69,7 +76,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         livesElement.style.top = '10px';
         livesElement.style.right = '10px';
         livesElement.style.fontSize = '24px';
-        livesElement.style.color = 'black';
+        livesElement.style.color = 'white';
         livesElement.innerHTML = `Lives: ${lives}`;
         document.body.appendChild(livesElement);
 
@@ -82,7 +89,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         restartButton.style.padding = '10px 20px';
         restartButton.style.fontSize = '24px';
         restartButton.style.display = 'none';
-        restartButton.style.color = 'black';
+        restartButton.style.color = 'white';
         restartButton.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
         restartButton.style.borderRadius = '8px';
         document.body.appendChild(restartButton);
@@ -140,7 +147,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         const radius = 0.01 + jumbled.length * 0.07;
       
         const geometry = new THREE.SphereGeometry(radius, 64, 32);
-        const material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+        const material = new THREE.MeshStandardMaterial({ color: 'white' });
         const stone = new THREE.Mesh(geometry, material);
       
         stone.position.x = (Math.random() - 0.5) * 4;
@@ -249,6 +256,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
       }
       
       function animateParticle(particle) {
+        explodeSound.currentTime = 0;
+        explodeSound.play();
+
         const particleLifetime = 100;
       
         function updateParticle() {
