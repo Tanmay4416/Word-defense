@@ -129,33 +129,47 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
 
       function spawnStone() {
         if (stones.length >= 2 || !currentCategoryWords.length) return;
-
+      
         const word =
           currentCategoryWords[
             Math.floor(Math.random() * currentCategoryWords.length)
           ];
         const jumbled = shuffleWord(word);
-
-        const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+      
+        // Estimate stone radius based on word length (adjust scaling factor as needed)
+        const radius = 0.01 + jumbled.length * 0.07;
+      
+        const geometry = new THREE.SphereGeometry(radius, 64, 32);
         const material = new THREE.MeshStandardMaterial({ color: 0x808080 });
         const stone = new THREE.Mesh(geometry, material);
-
+      
         stone.position.x = (Math.random() - 0.5) * 4;
         stone.position.y = 5;
-        stone.userData = { word: word, jumbled: jumbled };
-
+      
+        stone.userData = {
+          word: word,
+          jumbled: jumbled,
+          xSpeed: (Math.random() - 0.5) * 0.015,
+          radius: radius
+        };
+      
         scene.add(stone);
         stones.push(stone);
-
+      
+        // Create the label
         const label = document.createElement('div');
         label.textContent = jumbled;
         label.style.position = 'absolute';
         label.style.color = 'white';
         label.style.fontWeight = 'bold';
         label.style.pointerEvents = 'none';
+        label.style.whiteSpace = 'nowrap';
+        label.style.fontSize = `${Math.max(12, 24 - jumbled.length * 1.5)}px`; // Shrink font for longer words
         document.body.appendChild(label);
         stone.userData.label = label;
       }
+      
+      
 
       function animate() {
         if (gameOver) return;
@@ -163,14 +177,26 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
         requestAnimationFrame(animate);
       
         stones.forEach((stone, index) => {
+          // Move down
           stone.position.y -= fallingSpeed;
-      
+        
+          // Drift horizontally
+          stone.position.x += stone.userData.xSpeed;
+        
+          // Project stone's position to 2D
           const vector = stone.position.clone().project(camera);
           const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
           const y = (1 - (vector.y * 0.5 + 0.5)) * window.innerHeight;
-          stone.userData.label.style.left = `${x}px`;
-          stone.userData.label.style.top = `${y}px`;
-      
+        
+          // Center the label horizontally
+          const label = stone.userData.label;
+          const labelWidth = label.offsetWidth;
+          const labelHeight = label.offsetHeight;
+        
+          label.style.left = `${x - labelWidth / 2}px`;
+          label.style.top = `${y - labelHeight / 2}px`;
+        
+          // Check for fall below
           if (stone.position.y <= -1) {
             loseLife(index);
           }
@@ -186,7 +212,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
             document.body.removeChild(stone.userData.label);
             stones.splice(index, 1);
             wordInput.value = '';
-            fallingSpeed += 0.001;
+            fallingSpeed += 0.001; 
           }
         });
       
