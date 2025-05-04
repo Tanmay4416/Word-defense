@@ -8,7 +8,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
       let fallingSpeed = 0.015;
       let gameOver = false;
       let score = 0;
-      let lives = 5;
+      let lives = 3;
       let scoreElement, livesElement, restartButton;
 
       const categories = {
@@ -16,6 +16,27 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         vegetables: ['CARROT', 'TOMATO', 'SPINACH', 'POTATO', 'ONION'],
         dishes: ['PIZZA', 'BURGER', 'PASTA', 'CURRY', 'SALAD']
       };
+
+      const wordColors = {
+        APPLE: 0xff4d4d,
+        BANANA: 0xffeb3b,
+        ORANGE: 0xff9800,
+        MANGO: 0xffc107,
+        PEACH: 0xffb6c1,
+      
+        CARROT: 0xff5722,
+        TOMATO: 0xf44336,
+        SPINACH: 0x4caf50,
+        POTATO: 0x795548,
+        ONION: 0x9e9e9e,
+      
+        PIZZA: 0xff7043,
+        BURGER: 0xffa000,
+        PASTA: 0xffd54f,
+        CURRY: 0xef6c00,
+        SALAD: 0x8bc34a
+      };
+      
 
       let currentCategoryWords = [];
 
@@ -79,6 +100,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         livesElement.style.color = 'white';
         livesElement.innerHTML = `Lives: ${lives}`;
         document.body.appendChild(livesElement);
+        
 
         restartButton = document.createElement('div');
         restartButton.innerText = 'Press any key to continue';
@@ -144,6 +166,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         const jumbled = shuffleWord(word);
       
         // Estimate stone radius based on word length (adjust scaling factor as needed)
+        const wordColor = wordColors[word] || 0xffffff; 
         const radius = 0.01 + jumbled.length * 0.07;
       
         const geometry = new THREE.SphereGeometry(radius, 64, 32);
@@ -157,7 +180,8 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
           word: word,
           jumbled: jumbled,
           xSpeed: (Math.random() - 0.5) * 0.015,
-          radius: radius
+          radius: radius,
+          color: wordColor 
         };
       
         scene.add(stone);
@@ -214,7 +238,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
           if (enteredWord === stone.userData.word) {
             score += 10;
             updateUI();
-            triggerExplosion(stone.position);  // Trigger explosion
+            triggerExplosion(stone.position, stone.userData.color);  // Trigger explosion
             scene.remove(stone);
             document.body.removeChild(stone.userData.label);
             stones.splice(index, 1);
@@ -230,14 +254,14 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         renderer.render(scene, camera);
       }
 
-      function triggerExplosion(position) {
+      function triggerExplosion(position, color) {
         const particleCount = 50;
         const particleGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: color, transparent: true });
         
         // Create particles
         for (let i = 0; i < particleCount; i++) {
-          const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+          const particle = new THREE.Mesh(particleGeometry, particleMaterial.clone());
           particle.position.set(position.x, position.y, position.z);
           
           // Apply a random velocity to each particle
