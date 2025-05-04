@@ -1,0 +1,264 @@
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+
+      let scene, camera, renderer;
+      let stones = [];
+      let wordInput;
+      let fallingSpeed = 0.015;
+      let gameOver = false;
+      let score = 0;
+      let lives = 5;
+      let scoreElement, livesElement, restartButton;
+
+      const categories = {
+        fruits: ['APPLE', 'BANANA', 'ORANGE', 'MANGO', 'PEACH'],
+        vegetables: ['CARROT', 'TOMATO', 'SPINACH', 'POTATO', 'ONION'],
+        dishes: ['PIZZA', 'BURGER', 'PASTA', 'CURRY', 'SALAD']
+      };
+
+      let currentCategoryWords = [];
+
+      function shuffleWord(word) {
+        return word.split('').sort(() => Math.random() - 0.5).join('');
+      }
+
+      function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xbfd1e5);
+
+        camera = new THREE.PerspectiveCamera(
+          70,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.z = 5;
+        camera.position.y = 2;
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(0, 10, 10);
+        scene.add(light);
+
+        setupUI();
+        showCategoryPopup();
+      }
+
+      function setupUI() {
+        wordInput = document.createElement('input');
+        wordInput.style.position = 'absolute';
+        wordInput.style.bottom = '20px';
+        wordInput.style.left = '50%';
+        wordInput.style.transform = 'translateX(-50%)';
+        wordInput.style.fontSize = '24px';
+        document.body.appendChild(wordInput);
+
+        scoreElement = document.createElement('div');
+        scoreElement.style.position = 'absolute';
+        scoreElement.style.top = '10px';
+        scoreElement.style.left = '10px';
+        scoreElement.style.fontSize = '24px';
+        scoreElement.style.color = 'black';
+        scoreElement.innerHTML = `Score: 0`;
+        document.body.appendChild(scoreElement);
+
+        livesElement = document.createElement('div');
+        livesElement.style.position = 'absolute';
+        livesElement.style.top = '10px';
+        livesElement.style.right = '10px';
+        livesElement.style.fontSize = '24px';
+        livesElement.style.color = 'black';
+        livesElement.innerHTML = `Lives: ${lives}`;
+        document.body.appendChild(livesElement);
+
+        restartButton = document.createElement('div');
+        restartButton.innerText = 'Press any key to continue';
+        restartButton.style.position = 'absolute';
+        restartButton.style.top = '50%';
+        restartButton.style.left = '50%';
+        restartButton.style.transform = 'translate(-50%, -50%)';
+        restartButton.style.padding = '10px 20px';
+        restartButton.style.fontSize = '24px';
+        restartButton.style.display = 'none';
+        restartButton.style.color = 'black';
+        restartButton.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        restartButton.style.borderRadius = '8px';
+        document.body.appendChild(restartButton);
+      }
+
+      function showCategoryPopup() {
+        const existing = document.getElementById('categoryPopup');
+        if (existing) return;
+
+        const categoryPopup = document.createElement('div');
+        categoryPopup.id = 'categoryPopup';
+        categoryPopup.style.position = 'absolute';
+        categoryPopup.style.top = '50%';
+        categoryPopup.style.left = '50%';
+        categoryPopup.style.transform = 'translate(-50%, -50%)';
+        categoryPopup.style.backgroundColor = 'rgba(255,255,255,0.95)';
+        categoryPopup.style.padding = '20px';
+        categoryPopup.style.borderRadius = '10px';
+        categoryPopup.style.textAlign = 'center';
+        categoryPopup.style.zIndex = '10';
+
+        const title = document.createElement('h2');
+        title.textContent = 'Choose a Category';
+        categoryPopup.appendChild(title);
+
+        ['fruits', 'vegetables', 'dishes'].forEach((cat) => {
+          const button = document.createElement('button');
+          button.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+          button.style.margin = '10px';
+          button.style.padding = '10px 20px';
+          button.style.fontSize = '18px';
+          button.style.cursor = 'pointer';
+          button.onclick = () => {
+            currentCategoryWords = categories[cat];
+            document.body.removeChild(categoryPopup);
+            wordInput.focus();
+            animate();
+          };
+          categoryPopup.appendChild(button);
+        });
+
+        document.body.appendChild(categoryPopup);
+      }
+
+      function spawnStone() {
+        if (stones.length >= 2 || !currentCategoryWords.length) return;
+
+        const word =
+          currentCategoryWords[
+            Math.floor(Math.random() * currentCategoryWords.length)
+          ];
+        const jumbled = shuffleWord(word);
+
+        const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+        const material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+        const stone = new THREE.Mesh(geometry, material);
+
+        stone.position.x = (Math.random() - 0.5) * 4;
+        stone.position.y = 5;
+        stone.userData = { word: word, jumbled: jumbled };
+
+        scene.add(stone);
+        stones.push(stone);
+
+        const label = document.createElement('div');
+        label.textContent = jumbled;
+        label.style.position = 'absolute';
+        label.style.color = 'white';
+        label.style.fontWeight = 'bold';
+        label.style.pointerEvents = 'none';
+        document.body.appendChild(label);
+        stone.userData.label = label;
+      }
+
+      function animate() {
+        if (gameOver) return;
+
+        requestAnimationFrame(animate);
+
+        stones.forEach((stone, index) => {
+          stone.position.y -= fallingSpeed;
+
+          const vector = stone.position.clone().project(camera);
+          const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+          const y = (1 - (vector.y * 0.5 + 0.5)) * window.innerHeight;
+          stone.userData.label.style.left = `${x}px`;
+          stone.userData.label.style.top = `${y}px`;
+
+          if (stone.position.y <= -1) {
+            loseLife(index);
+          }
+        });
+
+        const enteredWord = wordInput.value.toUpperCase();
+        stones.forEach((stone, index) => {
+          if (enteredWord === stone.userData.word) {
+            score += 10;
+            updateUI();
+            scene.remove(stone);
+            document.body.removeChild(stone.userData.label);
+            stones.splice(index, 1);
+            wordInput.value = '';
+            fallingSpeed += 0.001;
+          }
+        });
+
+        if (Math.random() < 0.01) {
+          spawnStone();
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      function loseLife(index) {
+        lives--;
+        updateUI();
+        if (stones[index]) {
+          scene.remove(stones[index]);
+          document.body.removeChild(stones[index].userData.label);
+          stones.splice(index, 1);
+        }
+
+        if (lives <= 0) {
+          endGame();
+        }
+      }
+
+      function updateUI() {
+        scoreElement.innerHTML = `Score: ${score}`;
+        livesElement.innerHTML = `Lives: ${lives}`;
+      }
+
+      function endGame() {
+        gameOver = true;
+        wordInput.disabled = true;
+        restartButton.style.display = 'block';
+        window.addEventListener('keydown', handleRestartOnce);
+      }
+
+      function handleRestartOnce(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.removeEventListener('keydown', handleRestartOnce);
+
+        gameOver = false;
+        score = 0;
+        lives = 5;
+        fallingSpeed = 0.015;
+        updateUI();
+        wordInput.value = '';
+        wordInput.disabled = false;
+        restartButton.style.display = 'none';
+
+        stones.forEach((stone) => {
+          scene.remove(stone);
+          document.body.removeChild(stone.userData.label);
+        });
+        stones = [];
+
+        showCategoryPopup();
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation
+          .lock('portrait')
+          .catch((err) => console.log('Cannot lock orientation:', err));
+      }
+
+      init();
+
+      window.onload = () => {
+        wordInput.focus();
+      };
