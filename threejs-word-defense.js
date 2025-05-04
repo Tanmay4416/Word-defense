@@ -159,28 +159,29 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
 
       function animate() {
         if (gameOver) return;
-
+      
         requestAnimationFrame(animate);
-
+      
         stones.forEach((stone, index) => {
           stone.position.y -= fallingSpeed;
-
+      
           const vector = stone.position.clone().project(camera);
           const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
           const y = (1 - (vector.y * 0.5 + 0.5)) * window.innerHeight;
           stone.userData.label.style.left = `${x}px`;
           stone.userData.label.style.top = `${y}px`;
-
+      
           if (stone.position.y <= -1) {
             loseLife(index);
           }
         });
-
+      
         const enteredWord = wordInput.value.toUpperCase();
         stones.forEach((stone, index) => {
           if (enteredWord === stone.userData.word) {
             score += 10;
             updateUI();
+            triggerExplosion(stone.position);  // Trigger explosion
             scene.remove(stone);
             document.body.removeChild(stone.userData.label);
             stones.splice(index, 1);
@@ -188,13 +189,61 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.m
             fallingSpeed += 0.001;
           }
         });
-
+      
         if (Math.random() < 0.01) {
           spawnStone();
         }
-
+      
         renderer.render(scene, camera);
       }
+
+      function triggerExplosion(position) {
+        const particleCount = 50;
+        const particleGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+        const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        
+        // Create particles
+        for (let i = 0; i < particleCount; i++) {
+          const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+          particle.position.set(position.x, position.y, position.z);
+          
+          // Apply a random velocity to each particle
+          const velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2
+          );
+          
+          particle.userData = { velocity: velocity, life: 100 };
+          scene.add(particle);
+      
+          // Animate particles to fade out and disappear
+          animateParticle(particle);
+        }
+      }
+      
+      function animateParticle(particle) {
+        const particleLifetime = 100;
+      
+        function updateParticle() {
+          particle.position.add(particle.userData.velocity);
+          particle.userData.life--;
+      
+          // Fade out the particle
+          const alpha = Math.max(0, particle.userData.life / particleLifetime);
+          particle.material.opacity = alpha;
+      
+          if (particle.userData.life <= 0) {
+            scene.remove(particle);
+          } else {
+            requestAnimationFrame(updateParticle);
+          }
+        }
+      
+        updateParticle();
+      }
+      
+      
 
       function loseLife(index) {
         lives--;
