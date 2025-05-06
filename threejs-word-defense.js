@@ -1,5 +1,10 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
 const explodeSound = new Audio('backgrounds/explosion.mp3');
+explodeSound.volume = 0.4;
+const backgroundMusic = new Audio('backgrounds/back_sound2.mp3');
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.8;  // Adjust volume as needed
+
 
 
       let scene, camera, renderer;
@@ -28,7 +33,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         TOMATO: 0xf44336,
         SPINACH: 0x4caf50,
         POTATO: 0x795548,
-        ONION: 0x9e9e9e,
+        ONION: 0xec7063 ,
       
         PIZZA: 0xff7043,
         BURGER: 0xffa000,
@@ -47,6 +52,8 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
       function init() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x17202a);
+        // scene.background = new THREE.Color('black');
+
         // const loader = new THREE.TextureLoader();
         // loader.load('backgrounds/main.jpg', function (texture) {
         //   scene.background = texture;
@@ -61,6 +68,18 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         );
         camera.position.z = 5;
         camera.position.y = 2;
+        
+        const envMap = new THREE.CubeTextureLoader().load([
+          'https://threejs.org/examples/textures/cube/Bridge2/posx.jpg',
+          'https://threejs.org/examples/textures/cube/Bridge2/negx.jpg',
+          'https://threejs.org/examples/textures/cube/Bridge2/posy.jpg',
+          'https://threejs.org/examples/textures/cube/Bridge2/negy.jpg',
+          'https://threejs.org/examples/textures/cube/Bridge2/posz.jpg',
+          'https://threejs.org/examples/textures/cube/Bridge2/negz.jpg'
+        ]);
+        scene.environment = envMap;
+        scene.background = envMap;
+        
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -69,6 +88,9 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         const light = new THREE.DirectionalLight(0xffffff, 0.8);
         light.position.set(1, 2,5);
         scene.add(light);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Soft white ambient light
+        scene.add(ambientLight);
 
         setupUI();
         showCategoryPopup();
@@ -148,6 +170,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
             currentCategoryWords = categories[cat];
             document.body.removeChild(categoryPopup);
             wordInput.focus();
+            backgroundMusic.play();
             animate();
           };
           categoryPopup.appendChild(button);
@@ -157,7 +180,7 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
       }
 
       function spawnStone() {
-        if (stones.length >= 2 || !currentCategoryWords.length) return;
+        if (stones.length >= 3 || !currentCategoryWords.length) return;
       
         const word =
           currentCategoryWords[
@@ -169,8 +192,17 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
         const wordColor = wordColors[word] || 0xffffff; 
         const radius = 0.01 + jumbled.length * 0.07;
       
-        const geometry = new THREE.SphereGeometry(radius, 64, 32);
-        const material = new THREE.MeshStandardMaterial({ color: 'white' });
+        // const geometry = new THREE.SphereGeometry(radius, 64, 32);
+        // const material = new THREE.MeshStandardMaterial({ color: wordColor });
+
+        const geometry = new THREE.SphereGeometry(radius, 64, 64); // Higher segments for smooth sphere
+        const material = new THREE.MeshStandardMaterial({
+          color: wordColor,
+          metalness: 1.0,
+          roughness: 0.1,
+          envMap: scene.environment
+        });
+        
         const stone = new THREE.Mesh(geometry, material);
       
         stone.position.x = (Math.random() - 0.5) * 4;
@@ -257,27 +289,31 @@ const explodeSound = new Audio('backgrounds/explosion.mp3');
       function triggerExplosion(position, color) {
         const particleCount = 50;
         const particleGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-        const particleMaterial = new THREE.MeshBasicMaterial({ color: color, transparent: true });
-        
-        // Create particles
+      
         for (let i = 0; i < particleCount; i++) {
-          const particle = new THREE.Mesh(particleGeometry, particleMaterial.clone());
+          const material = new THREE.MeshStandardMaterial({
+            color: color,
+            envMap: scene.environment, // Make them reflective
+            metalness: 1,
+            roughness: 0
+          });
+      
+          const particle = new THREE.Mesh(particleGeometry, material);
           particle.position.set(position.x, position.y, position.z);
-          
-          // Apply a random velocity to each particle
+      
           const velocity = new THREE.Vector3(
             (Math.random() - 0.5) * 2,
             (Math.random() - 0.5) * 2,
             (Math.random() - 0.5) * 2
           );
-          
+      
           particle.userData = { velocity: velocity, life: 100 };
           scene.add(particle);
       
-          // Animate particles to fade out and disappear
           animateParticle(particle);
         }
       }
+      
       
       function animateParticle(particle) {
         explodeSound.currentTime = 0;
